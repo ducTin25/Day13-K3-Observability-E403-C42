@@ -95,3 +95,16 @@ Estimated Score: 100/100
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
 | **Thành viên B** *(Security Engineer)* | Xây dựng Regex patterns cho PII (Email, Phone, CCCD, Credit Card, Passport, Address VN), đăng ký bộ lọc đệ quy `scrub_event` trong `structlog`, bảo vệ băm `user_id_hash` và audit không rò rỉ dữ liệu nhạy cảm trên Traces/Logs (đạt điểm PII leak = 0, score 100/100). | PR #6 (`73b7c3f`) | Học được cách xử lý PII đệ quy trên Structlog pipeline, kỹ thuật tránh false-positive trên correlation ID/metrics, và phân tách trách nhiệm mã hóa bảo mật dữ liệu khách hàng. |
+
+---
+
+## 7. Audit Bảo Mật Dữ Liệu Challenge CP3 (`submission/evidence/cp3-challenge-logs.jsonl`)
+
+Đã tiến hành thẩm định độc lập trên file log thực thi chính thức của Challenge do Thành viên C bàn giao:
+- **Incident**: `rag_slow` (Tạo độ trễ trên tính năng `refund`).
+- **Tổng số log lines**: 12 dòng nhật ký (`request_received` và `response_sent`).
+- **Correlation IDs thẩm định**: `req-5f57363a`, `req-33c9924b`, `req-7644f60a`, `req-33bedc14`, `req-84c54330`.
+- **Mã hóa User ID**: 100% User ID thô (`k3-u01`..`k3-u05`) đều được băm SHA-256 (`026017618b2c`, `5da42a0d3d01`, `867738e76862`, `026c7a407135`, `b7fde6ae11b0`).
+- **Nội dung Previews**: 100% tin nhắn hỏi đáp đều đi qua `summarize_text()`, không lộ dữ liệu nhạy cảm.
+- **Kết luận Bảo mật CP3**: **`0 PII Leaks` (Đạt 100% tiêu chí an toàn dữ liệu Challenge)**.
+
