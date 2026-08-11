@@ -24,12 +24,13 @@ def main() -> None:
         choices=["rag_slow", "tool_fail", "cost_spike"],
         help="Chỉ dùng cho practice. Bỏ tham số này để đọc config/challenge.json.",
     )
+    parser.add_argument("--base-url", default=BASE_URL, help="API base URL")
     parser.add_argument("--disable", action="store_true")
     args = parser.parse_args()
 
     scenario = resolve_incident(args.scenario)
     path = f"/incidents/{scenario}/disable" if args.disable else f"/incidents/{scenario}/enable"
-    r = httpx.post(f"{BASE_URL}{path}", timeout=10.0)
+    r = httpx.post(f"{args.base_url}{path}", timeout=10.0)
     print(r.status_code, r.json())
 
 
