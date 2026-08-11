@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app import logging_config
 from app import main as main_module
+from app.agent import AgentResult
 from app.pii import hash_user_id
 
 
@@ -59,6 +60,32 @@ def test_invalid_correlation_id_is_replaced(monkeypatch, tmp_path: Path) -> None
     correlation_id = response.headers["x-request-id"]
     assert re.fullmatch(r"req-[0-9a-f]{8}", correlation_id)
     assert response.json()["correlation_id"] == correlation_id
+
+
+def test_chat_passes_correlation_id_to_agent(monkeypatch, tmp_path: Path) -> None:
+    log_path = tmp_path / "logs.jsonl"
+    monkeypatch.setattr(logging_config, "LOG_PATH", log_path)
+    captured: dict[str, object] = {}
+
+    def fake_run(**kwargs: object) -> AgentResult:
+        captured.update(kwargs)
+        return AgentResult(
+            answer="Test answer",
+            latency_ms=1,
+            tokens_in=1,
+            tokens_out=1,
+            cost_usd=0.0,
+            quality_score=1.0,
+        )
+
+    monkeypatch.setattr(main_module.agent, "run", fake_run)
+    correlation_id = "req-c0a0b0c0"
+
+    with TestClient(main_module.app) as client:
+        response = client.post("/chat", json=_chat_payload(), headers={"x-request-id": correlation_id})
+
+    assert response.status_code == 200
+    assert captured["correlation_id"] == correlation_id
 
 
 def test_unhandled_error_is_safe_and_counted_once(monkeypatch, tmp_path: Path) -> None:
