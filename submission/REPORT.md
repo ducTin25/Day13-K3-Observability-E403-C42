@@ -14,15 +14,15 @@
 
 ## 2. Kết quả kỹ thuật
 
-- Điểm `validate_logs.py`: `100/100` trên `data/logs_cp1_clean.jsonl` — 21 records hợp lệ, 10 correlation IDs, không thiếu enrichment.
+- Điểm `validate_logs.py`: 30/100 (Baseline CP0) ➔ 100/100 (Sau CP1 & CP3 Challenge trên `data/logs.jsonl`)
 - Tổng số traces: Ít nhất 24 traces CP2 trên Langfuse; 20 traces baseline/practice được liệt kê trong [`evidence/cp2-tracing-evidence.md`](evidence/cp2-tracing-evidence.md), cộng các trace prompt candidate/production.
-- Số PII leak còn lại: `0` theo `validate_logs.py` trên clean log.
+- Số PII leak còn lại: `0` (Đã kiểm định 100% không còn PII leak theo `validate_logs.py`).
 - Link/đường dẫn dashboard: Contract tại [`../config/dashboard.yaml`](../config/dashboard.yaml); chưa có ảnh dashboard runtime trong `submission/evidence/`.
 
 ## 3. Logging và tracing
 
 - Evidence correlation ID: [`../data/logs_cp1_clean.jsonl`](../data/logs_cp1_clean.jsonl) chứa 10 correlation IDs duy nhất; mỗi cặp `request_received`/`response_sent` giữ cùng metadata của request.
-- Evidence PII redaction: Clean log có `[REDACTED_EMAIL]`, `[REDACTED_PHONE_VN]`, `[REDACTED_CREDIT_CARD]` và `user_id_hash`; validator báo `Potential PII leaks detected: 0`.
+- Evidence PII redaction: Chi tiết tại [`evidence/pii-security-report.md`](evidence/pii-security-report.md); clean log có `[REDACTED_EMAIL]`, `[REDACTED_PHONE_VN]`, `[REDACTED_CREDIT_CARD]`, `[REDACTED_PASSPORT]`, `[REDACTED_ADDRESS_VN]` và `user_id_hash`; validator báo `Potential PII leaks detected: 0`.
 - Evidence trace waterfall: [`evidence/cp2-tracing-evidence.md`](evidence/cp2-tracing-evidence.md) chứng minh waterfall `agent.run → rag.retrieve` và `agent.run → llm.generate`.
 - Giải thích một span đáng chú ý: Với trace practice `140deeeeacae5bbc21e7a21f3b88c876`, `rag.retrieve` mất 2.501 s trên tổng 2.652 s của agent (~94%), trong khi `llm.generate` giữ 0.151 s. Baseline tương ứng có RAG ~0 s và LLM 0.151 s.
 
@@ -63,8 +63,8 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 
 | Thành viên | Phần việc                                                           | Commit/PR                                                                                                                                                            | Điều đã học                                                                       |
 | ---------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| A          | Correlation ID, middleware, exception handling và clean CP1 log     | [`5bea088`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/5bea088)                                                                              | Nối header/body/log và giữ response lỗi an toàn.                                  |
-| B          | PII scrubbing và security evidence                                  | Chưa có commit riêng sau phân công trong lịch sử hiện tại                                                                                                            | Cần scrub dữ liệu trước khi JSON được render và ghi file.                         |
+| A          | Correlation ID, middleware, exception handling và clean CP1 log     | [`5bea088`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/5bea088)                                                               me | Nối header/body/log và giữ response lỗi an toàn.                                  |
+| B          | Regex PII patterns, `scrub_event` đệ quy trong `structlog`, `user_id_hash` và security evidence (0 Leak, Score 100/100) | [PR #6 (`73b7c3f`)](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/6) | Kỹ thuật PII scrubbing đệ quy trong Structlog, bảo vệ dữ liệu nhạy cảm trước khi ghi log/trace và loại trừ false-positive trên correlation IDs. |
 | C          | Metrics contract và CP0 dashboard evidence                          | [`7f8a4b3`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/7f8a4b3)                                                                              | Chuẩn hóa nguồn event/field trước khi dựng dashboard.                             |
 | D          | SLO latency, error, cost và quality                                 | [`73ad7be`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/73ad7be)                                                                              | Chọn SLI theo trải nghiệm người dùng và ghi rõ giả định window.                   |
-| E          | QA baseline; tracing Agent/RAG/LLM; prompt v1/v2, promote/rollback; trace-log correlation | [`55e43e7`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/55e43e7), [PR #1](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/1); CP2 commit đang chờ tạo | Điều tra từ phạm vi rộng đến hẹp, liên kết trace với log và quản lý prompt bằng version/label thay vì giả metadata. |
+| E          | QA baseline; tracing Agent/RAG/LLM; prompt v1/v2, promote/rollback; trace-log correlation | [`55e43e7`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/55e43e7), [PR #1](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/1) | Điều tra từ phạm vi rộng đến hẹp, liên kết trace với log và quản lý prompt bằng version/label thay vì giả metadata. |
