@@ -1,0 +1,10 @@
+[200] req-544857e1 | qa | 13285.8ms
+[200] req-e1e31bd0 | qa | 13288.3ms
+[200] req-470693f7 | qa | 13286.6ms
+[200] req-5bd2692a | qa | 13288.8ms
+[200] req-ba6576a6 | summary | 13288.9ms
+[200] req-4df16668 | summary | 7966.8ms
+[200] req-0788af20 | qa | 7966.4ms
+[200] req-5469225c | qa | 10619.8ms
+[200] req-38d10a38 | qa | 10619.6ms
+[200] req-feb8e22a | qa | 13273.8ms
