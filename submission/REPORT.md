@@ -9,7 +9,7 @@
 
 ## 2. Kết quả kỹ thuật
 
-- Điểm `validate_logs.py`: 100/100 (CP1 & CP3 Challenge)
+- Điểm `validate_logs.py`: 30/100 (Baseline CP0) ➔ 100/100 (Sau CP1 & Challenge)
 - Tổng số traces:
 - Số PII leak còn lại: 0 (Đã kiểm định 100% không còn PII leak)
 - Link/đường dẫn dashboard:
