@@ -102,3 +102,42 @@ def test_negative_false_positives() -> None:
     assert out == safe_text
 
 
+def test_agent_trace_privacy_and_previews(monkeypatch) -> None:
+    from app import agent as agent_module
+
+    class DummyClient:
+        def __init__(self):
+            self.trace_data = {}
+            self.gen_data = {}
+
+        def update_current_trace(self, **kwargs):
+            self.trace_data = kwargs
+
+        def update_current_generation(self, **kwargs):
+            self.gen_data = kwargs
+
+    dummy = DummyClient()
+    monkeypatch.setattr(agent_module, "get_langfuse_client", lambda: dummy)
+
+    agent = agent_module.LabAgent()
+    agent_module.LabAgent.run.__wrapped__(
+        agent,
+        user_id="secret_user@domain.com",
+        feature="qa",
+        session_id="sess-123",
+        message="My email is user@test.com and phone is 0901234567",
+    )
+
+    # Verify user_id is hashed
+    assert "secret_user@domain.com" not in dummy.trace_data["user_id"]
+    assert len(dummy.trace_data["user_id"]) == 12
+
+    # Verify query_preview is scrubbed
+    query_preview = dummy.gen_data["metadata"]["query_preview"]
+    assert "user@test.com" not in query_preview
+    assert "0901234567" not in query_preview
+    assert "[REDACTED_EMAIL]" in query_preview
+    assert "[REDACTED_PHONE_VN]" in query_preview
+
+
+
