@@ -1,3 +1,4 @@
+import argparse
 import json
 import re
 import sys
@@ -106,4 +107,13 @@ def main() -> None:
     print(f"\nEstimated Score: {max(0, score)}/100")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Validate structured JSON logs.")
+    parser.add_argument(
+        "--log-path",
+        type=Path,
+        default=LOG_PATH,
+        help="Path to the JSONL log file to validate.",
+    )
+    args = parser.parse_args()
+    LOG_PATH = args.log_path
     main()

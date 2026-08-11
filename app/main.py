@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
+import time
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from structlog.contextvars import bind_contextvars
 
@@ -20,6 +22,77 @@ log = get_logger()
 app = FastAPI(title="Day 13 Observability Lab")
 app.add_middleware(CorrelationIdMiddleware)
 agent = LabAgent()
+
+
+def _request_observability_context(request: Request) -> dict[str, object]:
+    """Return safe context for failures that occur before a chat body is valid."""
+    return {
+        "correlation_id": getattr(request.state, "correlation_id", "unknown"),
+        "env": os.getenv("APP_ENV", "dev"),
+        "user_id_hash": None,
+        "session_id": None,
+        "feature": None,
+        "model": agent.model,
+    }
+
+
+def _with_observability_headers(request: Request, response: JSONResponse) -> JSONResponse:
+    correlation_id = getattr(request.state, "correlation_id", "unknown")
+    started_at = getattr(request.state, "request_started_at", None)
+    response.headers["x-request-id"] = correlation_id
+    if started_at is not None:
+        response.headers["x-response-time-ms"] = f"{(time.perf_counter() - started_at) * 1000:.2f}"
+    return response
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_exception_handler(
+    request: Request, _: RequestValidationError
+) -> JSONResponse:
+    """Return a safe client error without treating rejected input as a server failure."""
+    log.warning(
+        "request_rejected",
+        service="api",
+        error_type="RequestValidationError",
+        status_code=422,
+        payload={"path": request.url.path, "method": request.method},
+        **_request_observability_context(request),
+    )
+    return _with_observability_headers(
+        request,
+        JSONResponse(
+            status_code=422,
+            content={
+                "detail": "Invalid request",
+                "correlation_id": getattr(request.state, "correlation_id", "unknown"),
+            },
+        ),
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Log one safe server-failure event and preserve the request correlation ID."""
+    error_type = type(exc).__name__
+    record_error(error_type)
+    log.error(
+        "request_failed",
+        service="api",
+        error_type=error_type,
+        status_code=500,
+        payload={"path": request.url.path, "method": request.method},
+        **_request_observability_context(request),
+    )
+    return _with_observability_headers(
+        request,
+        JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Internal server error",
+                "correlation_id": getattr(request.state, "correlation_id", "unknown"),
+            },
+        ),
+    )
 
 
 @app.on_event("startup")
@@ -48,6 +121,13 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
     # bind_contextvars(...)
     
     record_request_attempt()
+    bind_contextvars(
+        user_id_hash=hash_user_id(body.user_id),
+        session_id=body.session_id,
+        feature=body.feature,
+        model=agent.model,
+        env=os.getenv("APP_ENV", "dev"),
+    )
     log.info(
         "request_received",
         service="api",
@@ -89,6 +169,31 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
             payload={"detail": str(exc), "message_preview": summarize_text(body.message)},
         )
         raise HTTPException(status_code=500, detail=error_type) from exc
+    result = agent.run(
+        user_id=body.user_id,
+        feature=body.feature,
+        session_id=body.session_id,
+        message=body.message,
+    )
+    log.info(
+        "response_sent",
+        service="api",
+        latency_ms=result.latency_ms,
+        tokens_in=result.tokens_in,
+        tokens_out=result.tokens_out,
+        cost_usd=result.cost_usd,
+        quality_score=result.quality_score,
+        payload={"answer_preview": summarize_text(result.answer)},
+    )
+    return ChatResponse(
+        answer=result.answer,
+        correlation_id=request.state.correlation_id,
+        latency_ms=result.latency_ms,
+        tokens_in=result.tokens_in,
+        tokens_out=result.tokens_out,
+        cost_usd=result.cost_usd,
+        quality_score=result.quality_score,
+    )
 
 
 @app.post("/incidents/{name}/enable")
