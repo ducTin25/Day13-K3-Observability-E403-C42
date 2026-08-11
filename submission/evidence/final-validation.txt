@@ -1,0 +1,28 @@
+Final pre-submission validation
+Run date: 2026-08-11
+Branch: main
+
+Command: python scripts/load_test.py --concurrency 5
+Result: 10/10 requests returned HTTP 200 with unique correlation IDs.
+
+Command: python scripts/validate_logs.py
+Total log records analyzed: 20
+Records with missing required fields: 0
+Records with missing enrichment (context): 0
+Unique correlation IDs found: 10
+Potential PII leaks detected: 0
+Estimated Score: 100/100
+
+Command: python scripts/validate_dashboard.py
+Result: HỢP LỆ: 6/6 panel có trong dashboard contract.
+
+Command: python -m pytest -q
+Result: 40 passed, 2 FastAPI on_event deprecation warnings.
+
+Health state before validation:
+{"ok":true,"tracing_enabled":true,"incidents":{"rag_slow":false,"tool_fail":false,"cost_spike":false}}
+
+Git integrity checks:
+- config/challenge.json matches upstream/main.
+- No tracked .env, virtual environment, API key, or real secret.
+- Report relative links were valid before final delivery.

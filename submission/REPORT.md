@@ -4,7 +4,7 @@
 
 - Tên nhóm: K3 — E403-C42
 - Repository URL: https://github.com/ducTin25/Day13-K3-Observability-E403-C42
-- Commit SHA cuối: Chưa chốt; `origin/main` tại thời điểm resolve là `0744782` (đã gồm CP3 A–D). Cần thay bằng SHA merge cuối cùng trước khi nộp.
+- Commit SHA chốt nội dung trước final-delivery commit: `49ab8c763d6e97bd881c6b6a011214c656921ba6`. SHA nộp chính thức là HEAD mới nhất của `main` sau commit hoàn thiện report/evidence và được ghi trên Codelabs.
 - Thành viên và vai trò:
   - Cao Nhật Minh — 2A202601721 — API, middleware và structured logging.
   - Nguyễn Nam Anh — 2A202601703 — Security Engineer, PII scrubbing.
@@ -14,10 +14,12 @@
 
 ## 2. Kết quả kỹ thuật
 
-- Điểm `validate_logs.py`: baseline CP0 `30/100`, sau CP1–CP3 đạt `100/100`; lượt kiểm tra cuối trên `data/logs_cp1_clean.jsonl` ghi nhận 48 records, 24 correlation IDs, không thiếu required field/enrichment và không phát hiện PII leak. Evidence CP2 được lưu tại [`evidence/cp2-validate-logs.txt`](evidence/cp2-validate-logs.txt).
+- Điểm `validate_logs.py`: baseline CP0 `30/100`, sau CP1–CP3 đạt `100/100`; clean-run cuối bằng lệnh mặc định ghi nhận 20 records, 10 correlation IDs, không thiếu required field/enrichment và không phát hiện PII leak. Xem [`evidence/final-validation.txt`](evidence/final-validation.txt); evidence CP2 được lưu tại [`evidence/cp2-validate-logs.txt`](evidence/cp2-validate-logs.txt).
 - Tổng số traces: Ít nhất 43 traces trên Langfuse sau CP3; CP2 có 20 traces baseline/practice trong [`evidence/cp2-tracing-evidence.md`](evidence/cp2-tracing-evidence.md), CP3 có thêm 15 traces official baseline/challenge/recovery trong [`evidence/cp3-e-investigation.md`](evidence/cp3-e-investigation.md), cộng các trace prompt candidate/production.
 - Số PII leak còn lại: `0` theo validator, bộ test PII/security và audit challenge của B.
-- Link/đường dẫn dashboard: Contract tại [`../config/dashboard.yaml`](../config/dashboard.yaml); runtime snapshot gồm [baseline HTML](evidence/cp2-dashboard-baseline.html), [practice incident HTML](evidence/cp2-dashboard-rag-slow.html), [official challenge HTML](evidence/cp3-challenge-dashboard.html) và [bảng tổng hợp](evidence/cp2-dashboard-summary.md). Ảnh dashboard runtime vẫn cần bổ sung trước khi nộp.
+- Link/đường dẫn dashboard: Contract tại [`../config/dashboard.yaml`](../config/dashboard.yaml); runtime snapshot gồm [baseline HTML](evidence/cp2-dashboard-baseline.html), [practice incident HTML](evidence/cp2-dashboard-rag-slow.html), [official challenge HTML](evidence/cp3-challenge-dashboard.html), [bảng tổng hợp](evidence/cp2-dashboard-summary.md) và [ảnh dashboard 6 panel](evidence/dashboard.jpg).
+
+![Dashboard 6 panel — official challenge](evidence/dashboard.jpg)
 
 ## 3. Logging và tracing
 
@@ -27,6 +29,8 @@
 - Giải thích một span đáng chú ý: Với trace practice `140deeeeacae5bbc21e7a21f3b88c876`, `rag.retrieve` mất 2.501 s trên tổng 2.652 s của agent (~94%), trong khi `llm.generate` giữ 0.151 s. Baseline tương ứng có RAG ~0 s và LLM 0.151 s.
 - Evidence official challenge: trace `aabc9cc147c22bb125c682479ca03eb2` nối với log bằng `req-9d336808`; RAG mất 2.501 s trên tổng 2.652 s, trong khi recovery trace `8014cca2270ada556ea2b9f9d59c700f` có RAG 0 s và agent 0.151 s.
 
+![Langfuse waterfall — RAG slow](evidence/trace-waterfall-rag-slow.jpg)
+
 ## 4. Prompt versioning
 
 - Prompt name: `day13-chat` theo prompt contract và cấu hình mặc định của ứng dụng.
@@ -34,6 +38,9 @@
 - Version/label candidate: Version 2 — labels `candidate`, `latest`.
 - Trace ID của mỗi version: baseline v1 `bb19d78c2d1aa24c8731801f6b809615`; candidate v2 `6d4e75fcb32c66ca2d4bf984d1cc9e30`; production v2 `1984d5d04a8c6e13d0bb44ea6bd208e2`; production rollback v1 `28b8becb0b8d543b3fa2663011b90a70`.
 - Bằng chứng đổi label hoặc rollback: [`evidence/cp2-prompt-versioning.md`](evidence/cp2-prompt-versioning.md) ghi nhận production được promote sang v2, tạo trace thật, sau đó rollback về v1 và tạo trace xác minh.
+- Ảnh Langfuse production v1: [`evidence/trace-prompt-v1-production.jpg`](evidence/trace-prompt-v1-production.jpg); v2 và rollback được kiểm chứng bằng các trace ID/API evidence ở trên.
+
+![Langfuse prompt production v1](evidence/trace-prompt-v1-production.jpg)
 
 ## 5. Dashboard, SLO và alerts
 
