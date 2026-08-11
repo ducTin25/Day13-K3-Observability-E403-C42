@@ -44,18 +44,18 @@
   - Chi phí ≤ 2.5 USD trong khoảng đánh giá của lab.
   - Quality score trung bình ≥ 0.75; E là owner của quality signal.
   - Production window là 28 ngày; trong lab dùng toàn bộ log của phiên demo/load test làm proxy do traffic giới hạn.
-- Alert rules và runbook: Chưa hoàn thành; [`../config/alert_rules.yaml`](../config/alert_rules.yaml) và [`../docs/alerts.md`](../docs/alerts.md) vẫn còn placeholder/TODO.
+- Alert rules và runbook: Hoàn thành — 4 symptom-based alert (latency P95, error rate, quality, cost) trong [`../config/alert_rules.yaml`](../config/alert_rules.yaml), runbook đầy đủ (SLI/SLO, điều kiện, 3 bước Metrics→Traces→Logs, mitigation/rollback, escalation, điều kiện đóng/verify recovery) trong [`../docs/alerts.md`](../docs/alerts.md). Không hard-code tên incident làm điều kiện alert.
 
 ## 6. Điều tra challenge
 
 - Challenge ID: `day13-k3-observability-v1`.
 - Phạm vi challenge: incident `rag_slow`, affected feature `refund`, latency threshold `2000 ms`.
-- Triệu chứng từ metrics: P95 latency là 2653 ms trong bucket `2026-08-11T05:05 UTC`, tăng từ baseline 151 ms và vượt threshold challenge 2000 ms; error rate vẫn 0.0%. Xem [metric handoff của C](evidence/cp3-role-c-metrics.md).
-- Trace ID liên quan: Chưa thu thập.
-- Log line/correlation ID liên quan: `req-5f57363a`, `req-33c9924b`, `req-7644f60a`, `req-33bedc14`, `req-84c54330`; xem [challenge JSONL](evidence/cp3-challenge-logs.jsonl).
-- Root cause: Chưa kết luận; giả thuyết RAG chậm phải được kiểm chứng bằng Metrics → Traces → Logs runtime.
-- Fix action: Chưa đề xuất trước khi có đủ evidence runtime.
-- Preventive measure: Chưa đề xuất trước khi có đủ evidence runtime.
+- Triệu chứng từ metrics: `GET /metrics` sau khi chạy `inject_incident.py` + `load_test.py --challenge --concurrency 5` báo `latency_p50=4194ms, latency_p95=6153ms` (ngưỡng SLO P95 3000ms), `error_rate_pct=0%`, `quality_avg=0.86`, `total_cost_usd=0.0088` — chỉ Alert 1 (Latency P95 Breach, critical) trigger, xem [`evidence/cp3-challenge-investigation.md`](evidence/cp3-challenge-investigation.md).
+- Trace ID liên quan: chưa lấy được qua Langfuse Read API (401 khi gọi `trace.list` dù ingestion vẫn hoạt động) — cần E/A mở Langfuse UI lọc tag `refund`/khung giờ `05:14:30–05:14:53Z (2026-08-11)` để bổ sung trace ID trực quan.
+- Log line/correlation ID liên quan: 5 correlation ID `req-933d8fb6, req-140f2201, req-a0aa5316, req-8f4be8c3, req-13e9d431` (feature `refund`, latency 3800–6153ms), chi tiết trong evidence file trên.
+- Root cause: `app/mock_rag.py` chèn `time.sleep(2.5)` trong `retrieve()` khi `STATE["rag_slow"]` bật — áp dụng cho toàn bộ RAG, không riêng feature `refund` (feature này chỉ trùng vì toàn bộ query challenge đều gắn `feature=refund`). Xác nhận bằng token count bình thường (loại trừ nguyên nhân LLM sinh output dài) và đối chiếu source code sau khi đã có giả thuyết từ metrics/log.
+- Fix action: `POST /incidents/rag_slow/disable`; xác minh recovery bằng 10 request tiếp theo có P95 = 1200ms (< 3000ms ngưỡng SLO), error_rate vẫn 0%.
+- Preventive measure (bàn giao E đưa vào phần tổng hợp): (1) `resolve_prompt()` gọi Langfuse `get_prompt` đồng bộ mỗi request, làm baseline latency tăng từ ~150ms lên ~1.1s sau khi bật tracing thật — nên fetch bất đồng bộ hoặc pre-warm cache khi startup; (2) `/metrics` cộng dồn latency từ lúc start process, không có time window, nên sau khi fix P95 hiển thị vẫn giữ giá trị cũ — cần windowed metrics; (3) `rag_slow` hiện là incident toàn cục (không lọc theo feature) — nếu muốn scope theo feature cần sửa `mock_rag.py`.
 
 ## 7. Đóng góp cá nhân
 
