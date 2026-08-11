@@ -50,9 +50,9 @@
 
 - Challenge ID: `day13-k3-observability-v1`.
 - Phạm vi challenge: incident `rag_slow`, affected feature `refund`, latency threshold `2000 ms`.
-- Triệu chứng từ metrics: Chưa chạy và lưu evidence official challenge.
+- Triệu chứng từ metrics: P95 latency là 2653 ms trong bucket `2026-08-11T05:05 UTC`, tăng từ baseline 151 ms và vượt threshold challenge 2000 ms; error rate vẫn 0.0%. Xem [metric handoff của C](evidence/cp3-role-c-metrics.md).
 - Trace ID liên quan: Chưa thu thập.
-- Log line/correlation ID liên quan: Chưa thu thập cho official challenge.
+- Log line/correlation ID liên quan: `req-5f57363a`, `req-33c9924b`, `req-7644f60a`, `req-33bedc14`, `req-84c54330`; xem [challenge JSONL](evidence/cp3-challenge-logs.jsonl).
 - Root cause: Chưa kết luận; giả thuyết RAG chậm phải được kiểm chứng bằng Metrics → Traces → Logs runtime.
 - Fix action: Chưa đề xuất trước khi có đủ evidence runtime.
 - Preventive measure: Chưa đề xuất trước khi có đủ evidence runtime.
