@@ -11,7 +11,7 @@ from structlog.contextvars import bind_contextvars
 from .agent import LabAgent
 from .incidents import disable, enable, status
 from .logging_config import configure_logging, get_logger
-from .metrics import record_error, snapshot
+from .metrics import record_error, record_request_attempt, snapshot
 from .middleware import CorrelationIdMiddleware
 from .pii import hash_user_id, summarize_text
 from .schemas import ChatRequest, ChatResponse
@@ -74,6 +74,8 @@ async def request_validation_exception_handler(
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Log one safe server-failure event and preserve the request correlation ID."""
     error_type = type(exc).__name__
+    # The global handler is the sole server-error path, so it records once.
+    # Keep the one-argument interface so observability adapters can replace it.
     record_error(error_type)
     log.error(
         "request_failed",
@@ -117,6 +119,7 @@ async def metrics() -> dict:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, body: ChatRequest) -> ChatResponse:
+    record_request_attempt()
     bind_contextvars(
         user_id_hash=hash_user_id(body.user_id),
         session_id=body.session_id,
