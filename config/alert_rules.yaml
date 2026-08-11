@@ -1,19 +1,42 @@
+evaluation_mode: spec
+evaluation_note: >
+  Repo không có alert engine thực. Các rule dưới đây là spec để đánh giá
+  thủ công (đọc /metrics hoặc dashboard) hoặc để cắm vào một evaluator
+  thật sau này — không có cron/daemon nào tự động bắn alert trong lab này.
+
 alerts:
-  - name: TODO_alert_1
-    severity: TODO
-    condition: TODO
+  - name: Chat API Latency P95 Breach
+    severity: critical
+    sli: latency_p95_ms
+    condition: p95(latency_ms) trên cửa sổ trượt 5 phút > 3000ms
+    sustain: duy trì liên tục >=5 phút (đánh giá lại mỗi 60s, cần >=3 lần đánh giá liên tiếp vượt ngưỡng để tránh flapping do 1 request đơn lẻ)
     type: symptom-based
-    owner: TODO
+    owner: A (API & Middleware)
     runbook: docs/alerts.md#alert-1
-  - name: TODO_alert_2
-    severity: TODO
-    condition: TODO
+
+  - name: Chat API High Error Rate
+    severity: critical
+    sli: error_rate_pct
+    condition: "count(request_failed) / count(request_received) * 100 trên cửa sổ trượt 5 phút > 2%"
+    sustain: duy trì liên tục >=5 phút, tối thiểu 5 request trong cửa sổ để tránh alert trên mẫu quá nhỏ
     type: symptom-based
-    owner: TODO
+    owner: C (Metrics & Dashboard)
     runbook: docs/alerts.md#alert-2
-  - name: TODO_alert_3
-    severity: TODO
-    condition: TODO
+
+  - name: Response Quality Degradation
+    severity: warning
+    sli: quality_score_avg
+    condition: mean(quality_score) trên cửa sổ trượt 15 phút < 0.75
+    sustain: duy trì liên tục >=15 phút (quality là tín hiệu chậm hơn latency/error, tránh phản ứng thái quá với 1-2 câu trả lời kém)
     type: symptom-based
-    owner: TODO
+    owner: E (QA & Chief Investigator)
     runbook: docs/alerts.md#alert-3
+
+  - name: Daily Cost Budget Risk
+    severity: warning
+    sli: daily_cost_usd
+    condition: sum(cost_usd) tích luỹ trong khoảng đánh giá (proxy cho 1 ngày, xem window_note trong config/slo.yaml) > 2.5 USD
+    sustain: kiểm tra tại mỗi lần snapshot (không cần sustain window vì đây là giá trị tích luỹ, không dao động qua lại)
+    type: symptom-based
+    owner: C (Metrics & Dashboard)
+    runbook: docs/alerts.md#alert-4

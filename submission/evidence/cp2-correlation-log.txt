@@ -1,0 +1,5 @@
+Trace ID: 140deeeeacae5bbc21e7a21f3b88c876
+Correlation ID: req-feb8e22a
+
+{"service": "api", "payload": {"message_preview": "How should alerts be designed?"}, "event": "request_received", "session_id": "s10", "correlation_id": "req-feb8e22a", "feature": "qa", "model": "claude-sonnet-4-5", "env": "dev", "user_id_hash": "105a9cef3903", "level": "info", "ts": "2026-08-11T04:52:14.437211Z"}
+{"service": "api", "latency_ms": 2651, "tokens_in": 28, "tokens_out": 137, "cost_usd": 0.002139, "quality_score": 0.9, "payload": {"answer_preview": "Starter answer. Teams should improve this output logic and add better quality ch..."}, "event": "response_sent", "session_id": "s10", "correlation_id": "req-feb8e22a", "feature": "qa", "model": "claude-sonnet-4-5", "env": "dev", "user_id_hash": "105a9cef3903", "level": "info", "ts": "2026-08-11T04:52:17.090040Z"}
