@@ -9,7 +9,7 @@ from structlog.contextvars import bind_contextvars
 from .agent import LabAgent
 from .incidents import disable, enable, status
 from .logging_config import configure_logging, get_logger
-from .metrics import record_error, record_request_attempt, snapshot
+from .metrics import record_error, snapshot
 from .middleware import CorrelationIdMiddleware
 from .pii import hash_user_id, summarize_text
 from .schemas import ChatRequest, ChatResponse
@@ -47,7 +47,6 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
     # TODO: Enrich logs with request context (user_id_hash, session_id, feature, model, env)
     # bind_contextvars(...)
     
-    record_request_attempt()
     log.info(
         "request_received",
         service="api",
@@ -81,7 +80,7 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
         )
     except Exception as exc:  # pragma: no cover
         error_type = type(exc).__name__
-        record_error(error_type, request.state.correlation_id)
+        record_error(error_type)
         log.error(
             "request_failed",
             service="api",
