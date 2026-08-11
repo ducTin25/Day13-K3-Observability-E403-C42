@@ -14,10 +14,17 @@
 
 ## 2. Kết quả kỹ thuật
 
+<<<<<<< HEAD
 - Điểm `validate_logs.py`: `100/100` trên `data/logs_cp1_clean.jsonl` — 21 records hợp lệ, 10 correlation IDs, không thiếu enrichment.
 - Tổng số traces: Chưa thu thập evidence Langfuse; chưa thể xác nhận yêu cầu tối thiểu 10 traces.
 - Số PII leak còn lại: `0` theo `validate_logs.py` trên clean log.
 - Link/đường dẫn dashboard: Contract tại [`../config/dashboard.yaml`](../config/dashboard.yaml); chưa có ảnh dashboard runtime trong `submission/evidence/`.
+=======
+- Điểm `validate_logs.py`: 30/100 (Baseline CP0)
+- Tổng số traces:
+- Số PII leak còn lại:
+- Link/đường dẫn dashboard:
+>>>>>>> c81a6c5a7a0f08e6507eccf6f80cf605898121bb
 
 ## 3. Logging và tracing
 
