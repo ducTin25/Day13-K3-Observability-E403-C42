@@ -1,16 +1,83 @@
 service: day13-observability-lab
+service_boundary: >
+  API chat (endpoint /chat và các feature con như refund/RAG) là bề mặt cần
+  bảo vệ. SLO đo trải nghiệm người dùng cuối request->response, không đo
+  nội bộ từng hàm.
 window: 28d
+window_note: >
+  28d là window chuẩn cho production. Trong buổi lab 4 giờ, traffic quá nhỏ
+  để đánh giá theo 28 ngày thật, nên nhóm đánh giá SLO trên toàn bộ log
+  sinh ra trong phiên demo/load test hiện tại (data/logs.jsonl) làm proxy.
+  Ghi rõ giả định này trong report, không âm thầm đổi window.
+no_traffic_policy: >
+  Nếu không có request nào trong khoảng đánh giá (không có event
+  response_sent/request_received), SLI đó được coi là "insufficient data",
+  không tính là pass và không tính là breach — tránh false green khi app
+  down hoàn toàn (không traffic có thể tự nó là symptom cần điều tra).
+
 slis:
   latency_p95_ms:
+    description: Thời gian phản hồi P95 cho một request chat.
+    source:
+      event: response_sent
+      field: latency_ms
+      aggregation: p95
     objective: 3000
     target: 99.5
-    note: Replace with your group's target
+    warning_threshold: 2400
+    critical_threshold: 3000
+    owner: A (API & Middleware)
+    rationale: >
+      Dùng P95 thay vì average vì average bị pha loãng bởi phần lớn request
+      nhanh, che mất tail latency — đúng phần trải nghiệm tệ nhất ảnh hưởng
+      người dùng thật (và là triệu chứng của incident rag_slow ở challenge).
+      3000ms lấy từ threshold đã thống nhất với dashboard (config/dashboard.yaml).
+
   error_rate_pct:
+    description: Tỉ lệ request lỗi trên tổng request.
+    source:
+      events: [request_received, request_failed]
+      field: error_type
+      formula: count(request_failed) / count(request_received) * 100
     objective: 2
     target: 99.0
+    warning_threshold: 1
+    critical_threshold: 2
+    owner: C (Metrics & Dashboard)
+    rationale: >
+      Ngưỡng 2% khớp dashboard. Mẫu số phải đồng bộ với định nghĩa của C và
+      A phải đảm bảo middleware/exception handler chỉ log một request_failed
+      cho mỗi lỗi thật (tránh double-count làm error_rate_pct sai cao hơn
+      thực tế).
+
   daily_cost_usd:
+    description: Tổng chi phí LLM trong khoảng đánh giá.
+    source:
+      event: response_sent
+      field: cost_usd
+      aggregation: sum
     objective: 2.5
     target: 100.0
+    owner: C (Metrics & Dashboard)
+    rationale: >
+      2.5 USD là ngân sách vận hành thống nhất với dashboard panel cost.
+      Trong lab, tính sum theo phiên demo thay vì theo ngày lịch (xem
+      window_note).
+
   quality_score_avg:
+    description: Điểm chất lượng trung bình (proxy) của câu trả lời.
+    source:
+      event: response_sent
+      field: quality_score
+      aggregation: mean
     objective: 0.75
     target: 95.0
+    owner: E (QA & Chief Investigator)
+    rationale: >
+      0.75 khớp threshold dashboard. QA (E) là chủ sở hữu tự nhiên của tín
+      hiệu chất lượng vì gắn với việc điều tra và đánh giá output.
+
+assumptions:
+  - "SLI/target không được chọn để baseline hiện tại luôn pass — số lấy từ threshold dashboard đã thống nhất trước, không tự nới theo log hiện có."
+  - "error_rate_pct phụ thuộc A hoàn thiện middleware (mỗi lỗi đếm đúng 1 lần) và C chốt công thức đếm — nếu công thức đổi, SLI này phải cập nhật lại."
+  - "latency_p95_ms chỉ đáng tin sau khi A gán correlation_id/timing đúng qua middleware (hiện tại request chưa có correlation_id thật)."
