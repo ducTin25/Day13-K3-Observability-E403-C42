@@ -15,7 +15,7 @@
 ## 2. Kết quả kỹ thuật
 
 - Điểm `validate_logs.py`: `100/100` — 43 records, 22 correlation IDs, không thiếu required field/enrichment và không phát hiện PII leak; xem [`evidence/cp2-validate-logs.txt`](evidence/cp2-validate-logs.txt).
-- Tổng số traces: Ít nhất 24 traces CP2 trên Langfuse; 20 traces baseline/practice được liệt kê trong [`evidence/cp2-tracing-evidence.md`](evidence/cp2-tracing-evidence.md), cộng các trace prompt candidate/production.
+- Tổng số traces: Ít nhất 43 traces trên Langfuse sau CP3; CP2 có 20 traces baseline/practice trong [`evidence/cp2-tracing-evidence.md`](evidence/cp2-tracing-evidence.md), CP3 có thêm 15 traces official baseline/challenge/recovery trong [`evidence/cp3-e-investigation.md`](evidence/cp3-e-investigation.md), cộng các trace prompt candidate/production.
 - Số PII leak còn lại: `0` theo validator và bộ test PII/security.
 - Link/đường dẫn dashboard: Contract tại [`../config/dashboard.yaml`](../config/dashboard.yaml); runtime snapshot gồm [baseline HTML](evidence/cp2-dashboard-baseline.html), [incident HTML](evidence/cp2-dashboard-rag-slow.html) và [bảng tổng hợp](evidence/cp2-dashboard-summary.md). Ảnh dashboard runtime vẫn cần bổ sung trước khi nộp.
 
@@ -25,6 +25,7 @@
 - Evidence PII redaction: Clean log có `[REDACTED_EMAIL]`, `[REDACTED_PHONE_VN]`, `[REDACTED_CREDIT_CARD]` và `user_id_hash`; [`evidence/cp2-validate-logs.txt`](evidence/cp2-validate-logs.txt) ghi nhận `Potential PII leaks detected: 0`.
 - Evidence trace waterfall: [`evidence/cp2-tracing-evidence.md`](evidence/cp2-tracing-evidence.md) chứng minh waterfall `agent.run → rag.retrieve` và `agent.run → llm.generate`.
 - Giải thích một span đáng chú ý: Với trace practice `140deeeeacae5bbc21e7a21f3b88c876`, `rag.retrieve` mất 2.501 s trên tổng 2.652 s của agent (~94%), trong khi `llm.generate` giữ 0.151 s. Baseline tương ứng có RAG ~0 s và LLM 0.151 s.
+- Evidence official challenge: trace `aabc9cc147c22bb125c682479ca03eb2` nối với log bằng `req-9d336808`; RAG mất 2.501 s trên tổng 2.652 s, trong khi recovery trace `8014cca2270ada556ea2b9f9d59c700f` có RAG 0 s và agent 0.151 s.
 
 ## 4. Prompt versioning
 
@@ -50,13 +51,13 @@
 
 - Challenge ID: `day13-k3-observability-v1`.
 - Phạm vi challenge: incident `rag_slow`, affected feature `refund`, latency threshold `2000 ms`.
-- Triệu chứng từ metrics: Chưa chạy và lưu evidence official challenge. Practice `rag_slow` cho thấy RAG tăng từ xấp xỉ 0 s lên 2.501 s, nhưng không được dùng thay cho official challenge.
-- Trace ID liên quan: Chưa thu thập.
-- Log line/correlation ID liên quan: Chưa thu thập cho official challenge.
-- Root cause: Chưa kết luận; giả thuyết RAG chậm phải được kiểm chứng bằng Metrics → Traces → Logs runtime.
-- Fix action: Chưa đề xuất trước khi có đủ evidence runtime.
-- Preventive measure: Chưa đề xuất trước khi có đủ evidence runtime.
-- Recovery verification: Chưa có lượt chạy lại official workload sau khi disable incident.
+- Triệu chứng từ metrics: Với cùng 5 official queries và concurrency 5, P95 tăng từ baseline 1414 ms lên 2652 ms, vượt threshold challenge 2000 ms; error rate vẫn 0.0% và quality mean vẫn 0.86.
+- Trace ID liên quan: challenge `aabc9cc147c22bb125c682479ca03eb2`; baseline đối chiếu `b4035f64539e20deb42aef06fd2a60aa`; recovery `8014cca2270ada556ea2b9f9d59c700f`.
+- Log line/correlation ID liên quan: `req-9d336808`; cặp `request_received`/`response_sent` ghi feature `refund`, latency 2651 ms và nối đúng với trace challenge.
+- Root cause: RAG retrieval bị tăng latency trên official refund workload. Trong trace challenge, `rag.retrieve` chiếm 2.501/2.652 s (~94%); LLM giữ 0.151 s, request không lỗi và quality không giảm.
+- Fix action: Đã disable incident để khôi phục RAG bình thường; hướng production là retrieval timeout kết hợp cache/fallback an toàn khi dependency vượt latency budget.
+- Preventive measure: Alert RAG span P95 theo feature, giữ trace-log correlation, thêm regression workload before/after và theo dõi timeout/fallback count trong runbook.
+- Recovery verification: Sau disable, chạy lại cùng 5 query/concurrency cho P95 151 ms; RAG span về 0 s, agent về 0.151 s, error rate 0.0%. Evidence đầy đủ tại [`evidence/cp3-e-investigation.md`](evidence/cp3-e-investigation.md), [`evidence/cp3-e-correlation-logs.jsonl`](evidence/cp3-e-correlation-logs.jsonl) và [`evidence/cp3-e-load-output.txt`](evidence/cp3-e-load-output.txt).
 
 ## 7. Đóng góp cá nhân
 
@@ -68,4 +69,4 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 | B — Nguyễn Nam Anh | PII patterns, recursive scrubbing, `user_id_hash`, trace privacy và security evidence | [`c67b7d8`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/c67b7d8), [`73b7c3f`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/73b7c3f), [`3debcf5`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/3debcf5), [PR #6](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/6) | Scrub dữ liệu nhạy cảm trước khi render log/trace, xử lý đệ quy và tránh false positive trên identifier kỹ thuật. |
 | C — Dương Văn Vũ | Metrics snapshot/contract, dashboard 6 panel và dashboard evidence baseline/incident | [`7f8a4b3`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/7f8a4b3), [`96926c5`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/96926c5), [`3d8296e`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/3d8296e), [PR #7](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/7), [PR #11](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/11) | Chuẩn hóa nguồn event/field, dùng percentile cho tail latency và đối chiếu dashboard với dữ liệu JSONL. |
 | D — Trần Anh Thư | SLO latency/error/cost/quality, alert rules và runbook điều tra/recovery | [`73ad7be`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/73ad7be), [`c76db70`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/c76db70), [PR #2](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/2), [PR #10](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/10) | Chọn SLI theo ảnh hưởng người dùng, định nghĩa sustain window/escalation và xác minh recovery thay vì chỉ tắt cảnh báo. |
-| E — Nguyễn Đức Tín | QA baseline/CP1; tracing Agent/RAG/LLM; prompt v1/v2, promote/rollback; load test và trace-log correlation | [`55e43e7`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/55e43e7), [`a6ab966`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/a6ab966), [`e86b968`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/e86b968), [PR #1](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/1), [PR #9](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/9), [PR #12](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/12) | Điều tra từ phạm vi rộng đến hẹp, liên kết trace với log và quản lý prompt bằng version/label thật thay vì giả metadata. |
+| E — Nguyễn Đức Tín | QA baseline/CP1; tracing Agent/RAG/LLM; prompt v1/v2; official challenge investigation; trace-log correlation và recovery verification | [`55e43e7`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/55e43e7), [`a6ab966`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/a6ab966), [`e86b968`](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/commit/e86b968), [PR #1](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/1), [PR #9](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/9), [PR #12](https://github.com/ducTin25/Day13-K3-Observability-E403-C42/pull/12) | Điều tra Metrics → Traces → Logs bằng evidence thật, khoanh vùng RAG và chỉ đóng incident sau khi cùng workload chứng minh recovery. |

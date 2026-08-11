@@ -1,0 +1,29 @@
+Challenge: day13-k3-observability-v1 | Cohort: K3
+
+[baseline, incident off, concurrency 5]
+[200] req-f5c7ae45 | refund | 2260.0ms
+[200] req-e0e1d3b4 | refund | 2262.2ms
+[200] req-2ebfe97c | refund | 2414.0ms
+[200] req-47575f23 | refund | 2416.2ms
+[200] req-3262b4e1 | refund | 2415.7ms
+window metrics: P50=151ms P95=1414ms errors=0 quality_mean=0.86
+
+[official challenge, rag_slow enabled, concurrency 5]
+[200] req-9d336808 | refund | 5315.1ms
+[200] req-f8faa066 | refund | 5314.9ms
+[200] req-1b88ea82 | refund | 13279.2ms
+[200] req-047b313e | refund | 13279.9ms
+[200] req-61bbe6d4 | refund | 13280.7ms
+window metrics: P50=2651ms P95=2652ms errors=0 quality_mean=0.86
+
+[recovery, incident disabled, concurrency 5]
+[200] req-3ac12bb5 | refund | 466.5ms
+[200] req-dd6cf23f | refund | 774.7ms
+[200] req-bafa34e5 | refund | 773.5ms
+[200] req-5d6ee495 | refund | 774.7ms
+[200] req-55a2c6e4 | refund | 774.2ms
+window metrics: P50=151ms P95=151ms errors=0 quality_mean=0.86
+
+Note: client-observed time includes concurrent prompt-fetch/export overhead.
+Incident conclusions use the API's per-request `latency_ms` and Langfuse
+observation durations, which agree on the 2.5-second RAG degradation.
