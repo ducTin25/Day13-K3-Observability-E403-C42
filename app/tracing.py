@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager, nullcontext
 from typing import Any
 
 try:
@@ -17,7 +18,18 @@ except ImportError:  # pragma: no cover - chỉ dùng khi chưa cài requirement
         return decorator
 
     class _DummyClient:
+        @contextmanager
+        def start_as_current_span(self, **kwargs: Any):
+            yield self
+
+        @contextmanager
+        def start_as_current_generation(self, **kwargs: Any):
+            yield self
+
         def update_current_trace(self, **kwargs: Any) -> None:
+            return None
+
+        def update_current_span(self, **kwargs: Any) -> None:
             return None
 
         def update_current_generation(self, **kwargs: Any) -> None:
@@ -29,6 +41,22 @@ except ImportError:  # pragma: no cover - chỉ dùng khi chưa cài requirement
 
 def get_langfuse_client():
     return get_client()
+
+
+def current_span(client: Any, **kwargs: Any):
+    starter = getattr(client, "start_as_current_span", None)
+    return starter(**kwargs) if callable(starter) else nullcontext()
+
+
+def current_generation(client: Any, **kwargs: Any):
+    starter = getattr(client, "start_as_current_generation", None)
+    return starter(**kwargs) if callable(starter) else nullcontext()
+
+
+def update_current_span(client: Any, **kwargs: Any) -> None:
+    updater = getattr(client, "update_current_span", None)
+    if callable(updater):
+        updater(**kwargs)
 
 
 def tracing_enabled() -> bool:
