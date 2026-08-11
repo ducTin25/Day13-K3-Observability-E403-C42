@@ -9,15 +9,15 @@
 
 ## 2. Kết quả kỹ thuật
 
-- Điểm `validate_logs.py`: 30/100 (Baseline CP0)
+- Điểm `validate_logs.py`: 100/100 (CP1 & CP3 Challenge)
 - Tổng số traces:
-- Số PII leak còn lại:
+- Số PII leak còn lại: 0 (Đã kiểm định 100% không còn PII leak)
 - Link/đường dẫn dashboard:
 
 ## 3. Logging và tracing
 
 - Evidence correlation ID:
-- Evidence PII redaction:
+- Evidence PII redaction: submission/evidence/pii-security-report.md
 - Evidence trace waterfall:
 - Giải thích một span đáng chú ý:
 
@@ -52,4 +52,5 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
+| **Thành viên B** *(Security Engineer)* | Xây dựng Regex PII patterns (Email, Phone, CCCD, Card, Passport, Address VN), lọc đệ quy `scrub_event` trong `structlog`, băm `user_id_hash` và audit không lộ dữ liệu nhạy cảm trên Log/Trace (0 Leak, Score 100/100). | PR #6 (`73b7c3f`) | Kỹ thuật PII scrubbing đệ quy trong Structlog, bảo vệ dữ liệu nhạy cảm trước khi ghi log/trace và loại trừ false-positive trên correlation IDs. |
 | | | | |
